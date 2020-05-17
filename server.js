@@ -1,5 +1,6 @@
 const { WebClient } = require('@slack/web-api');
 const express = require('express')
+const fetch = require('node-fetch');
 const port = 8080;
 const host = 'localhost'
 
@@ -14,54 +15,70 @@ const web = new WebClient(token);
 
 
 app.post('/', async (req, res) => {
-    console.log("app mentioned")
-    console.log(req.body)
-
-    let isBot = req.body.event.bot_profile;
 
 
-    if (!isBot) {
-        const result = await web.chat.postMessage({
-            text: "It works",
-            channel: "#api-calls",
-        });
+    let isBot = req.body.event.bot_id;
+    let isThread = req.body.event.thread_ts;
+    res.sendStatus(200)
+
+    if(isBot) {
+        return
     }
 
-    res.sendStatus(200)
-    
+    if(!isThread) {
+        console.log("app mentioned")
+        console.log(req.body)
+        getincidentdetails(req.body.event.text, req.body.event.ts)
+    }
+
+    if(isThread) {
+        console.log("app mentioned in thread")
+        console.log(req.body)
+        getincidentdetails(req.body.event.text, req.body.event.thread_ts);
+    }
+
     console.log("Slack call finished")
-    getincidentdetails("INC0010111")
-    
+
+
 })
 
 app.listen(port, host, () => {
     console.log(`Started server on http:\\\\${host}:${port}`)
 })
 
-// function getincidentdetails() {
 
-// var requestBody = ""; 
+async function sendSlackResponse(data, tsValue, incidentNumber) {
 
-// var client=new XMLHttpRequest();
-// client.open("get","https://dev97948.service-now.com/api/451809/getincidentdetails/" + incidentNumber);
+    const str = JSON.stringify(data)
+    const strParse = str.replace(/"/g,"")
+    .replace(/\[/g,"")
+    .replace(/{/g,"")
+    .replace(/}/g,"")
+    .replace(/\]/g,"")
+    .replace(/:/g,": ")
+    .replace(/,/g,'\n')
+    .replace(/result: /g,"")
+    .replace(/Short Description:/g,"*Short Description:*")
+    .replace(/Assignment Group:/g,"*Assignment Group:*")
+    .replace(/Last Work Note:/g,"\n*Last Work Note:*")
+    
+    const text = '\n' + '<https://dev97948.service-now.com/incident.do?sys_id=' + incidentNumber + '|' + incidentNumber + '>' + '\n' + '\n' + strParse
 
-// client.setRequestHeader('Accept','application/json');
-// client.setRequestHeader('Content-Type','application/json');
+    await web.chat.postMessage({
+        text: text,
+        channel: "#api-calls",
+        thread_ts: tsValue,
+    });
+}
 
-// client.setRequestHeader('Authorization', 'Basic '+btoa('admin'+':'+'BfekQKuC1e8W'));
+function getincidentdetails(commentText, tsValue) {
 
-// client.onreadystatechange = function() { 
-// 	if(this.readyState == this.DONE) {
-// 		document.getElementById("response").innerHTML=this.status + this.response; 
-// 	}
-// }; 
-// client.send(requestBody);
-
-// }
-
-incidentNumber = ""
-
-function getincidentdetails(incidentNumber, callbackFunc) {
+    const regex1 = RegExp(/!INC\d{7}/)
+    const resultsList = regex1.exec(commentText)
+    if (resultsList == null){
+        return
+    }
+    const incidentNumber = resultsList[0].slice(1)
 
     let header = {
         method: 'GET',
@@ -73,19 +90,19 @@ function getincidentdetails(incidentNumber, callbackFunc) {
         body: null,
     }
 
+    
 
     fetch("https://dev97948.service-now.com/api/451809/getincidentdetails/" + incidentNumber, header)
-        .then((res) => {
+        .then(function (res) {
             if (res.status === 404) {
                 console.log("No incident.")
             }
             else {
-                res.json().then(function (data) {
-                    console.log(data);
-                    // callbackFunc(JSON.parse(data))
+                res.json().then(function  (data) {
+                   sendSlackResponse(data, tsValue, incidentNumber);
+                   console.log(data)
+
                 });
             }
         })
 }
-
-
