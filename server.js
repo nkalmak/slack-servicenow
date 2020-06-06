@@ -56,11 +56,23 @@ async function sendSlackResponse(data, tsValue, incidentNumber) {
     .replace(/}/g,"")
     .replace(/\]/g,"")
     .replace(/:/g,": ")
+    .replace(/\\n/g,"")
     .replace(/,/g,'\n')
+    .replace(/[*]/g,'\n')
     .replace(/result: /g,"")
     .replace(/Short Description:/g,"*Short Description:*")
     .replace(/Assignment Group:/g,"*Assignment Group:*")
-    .replace(/Last Work Note:/g,"\n*Last Work Note:*")
+    .replace(/Last Work Note:/g,"")
+    .replace(/User:/g,"\n\n*User:*\n")
+    .replace(/\r/g,"")
+    .replace(/Serial Number or Asset Tag:/g,"*Serial Number or Asset Tag:*\n")
+    .replace(/Issue:/g,"*Issue:*\n")
+    .replace(/KB Used:/g,"*KB Used:*\n")
+    .replace(/CI Used:/g,"*CI Used:*\n")
+    .replace(/Troubleshooting Steps:/g,"*Troubleshooting Steps:*\n")
+    .replace(/Question:/g,"*Question:*\n")
+    .replace(/Additional Info:/g,"*Additional Info:*\n")
+    
     
     const text = '\n' + '<https://dev97948.service-now.com/incident.do?sys_id=' + incidentNumber + '|' + incidentNumber + '>' + '\n' + '\n' + strParse
 
